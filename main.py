@@ -1,5 +1,6 @@
 from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
+from astrbot.api.all import AstrMessageEvent, CommandResult, Context, Image, Plain
 from astrbot.api import logger
 import aiohttp
 import datetime
