@@ -7,7 +7,7 @@ class Main(Star):
     def __init__(self, context: Context):
         super().__init__(context)
     
-    @filter.command("喜加一")
+    @filter.command("epic")
     async def epic_free_game(self, message: AstrMessageEvent):
         '''EPIC 喜加一'''
         url = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions"
