@@ -2,20 +2,82 @@ from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 
-@register("helloworld", "YourName", "一个简单的 Hello World 插件", "1.0.0")
-class MyPlugin(Star):
+@register("X", "SonyDog", "X", "0.0.1")
+class Main(Star):
     def __init__(self, context: Context):
         super().__init__(context)
     
-    # 注册指令的装饰器。指令名为 helloworld。注册成功后，发送 `/helloworld` 就会触发这个指令，并回复 `你好, {user_name}!`
-    @filter.command("helloworld")
-    async def helloworld(self, event: AstrMessageEvent):
-        '''这是一个 hello world 指令''' # 这是 handler 的描述，将会被解析方便用户了解插件内容。建议填写。
-        user_name = event.get_sender_name()
-        message_str = event.message_str # 用户发的纯文本消息字符串
-        message_chain = event.get_messages() # 用户所发的消息的消息链 # from astrbot.api.message_components import *
-        logger.info(message_chain)
-        yield event.plain_result(f"Hello, {user_name}, 你发了 {message_str}!") # 发送一条纯文本消息
+    @filter.command("喜加一")
+    async def epic_free_game(self, message: AstrMessageEvent):
+        '''EPIC 喜加一'''
+        url = "https://store-site-backend-static-ipv4.ak.epicgames.com/freeGamesPromotions"
 
-    async def terminate(self):
-        '''可选择实现 terminate 函数，当插件被卸载/停用时会调用。'''
+        async with aiohttp.ClientSession() as session:
+            async with session.get(url) as resp:
+                if resp.status != 200:
+                    return CommandResult().error("请求失败")
+                data = await resp.json()
+
+        games = []
+        upcoming = []
+
+        for game in data["data"]["Catalog"]["searchStore"]["elements"]:
+            title = game.get("title", "未知")
+            try:
+                if not game.get("promotions"):
+                    continue
+                original_price = game["price"]["totalPrice"]["fmtPrice"][
+                    "originalPrice"
+                ]
+                discount_price = game["price"]["totalPrice"]["fmtPrice"][
+                    "discountPrice"
+                ]
+                promotions = game["promotions"]["promotionalOffers"]
+                upcoming_promotions = game["promotions"]["upcomingPromotionalOffers"]
+
+                if promotions:
+                    promotion = promotions[0]["promotionalOffers"][0]
+                else:
+                    promotion = upcoming_promotions[0]["promotionalOffers"][0]
+                start = promotion["startDate"]
+                end = promotion["endDate"]
+                # 2024-09-19T15:00:00.000Z
+                start_utc8 = datetime.datetime.strptime(
+                    start, "%Y-%m-%dT%H:%M:%S.%fZ"
+                ) + datetime.timedelta(hours=8)
+                start_human = start_utc8.strftime("%Y-%m-%d %H:%M")
+                end_utc8 = datetime.datetime.strptime(
+                    end, "%Y-%m-%dT%H:%M:%S.%fZ"
+                ) + datetime.timedelta(hours=8)
+                end_human = end_utc8.strftime("%Y-%m-%d %H:%M")
+                discount = float(promotion["discountSetting"]["discountPercentage"])
+                if discount != 0:
+                    # 过滤掉不是免费的游戏
+                    continue
+
+                if promotions:
+                    games.append(
+                        f"【{title}】\n原价: {original_price} | 现价: {discount_price}\n活动时间: {start_human} - {end_human}"
+                    )
+                else:
+                    upcoming.append(
+                        f"【{title}】\n原价: {original_price} | 现价: {discount_price}\n活动时间: {start_human} - {end_human}"
+                    )
+
+            except BaseException as e:
+                raise e
+                games.append(f"处理 {title} 时出现错误")
+
+        if len(games) == 0:
+            return CommandResult().message("暂无免费游戏")
+        return (
+            CommandResult()
+            .message(
+                "【EPIC 喜加一】\n"
+                + "\n\n".join(games)
+                + "\n\n"
+                + "【即将免费】\n"
+                + "\n\n".join(upcoming)
+            )
+            .use_t2i(False)
+        )
