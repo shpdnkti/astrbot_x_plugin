@@ -2,7 +2,7 @@ from astrbot.api.event import filter, AstrMessageEvent, MessageEventResult
 from astrbot.api.star import Context, Star, register
 from astrbot.api import logger
 
-@register("X", "SonyDog", "X", "0.0.1")
+@register("X", "SonyDog", "", "", "")
 class Main(Star):
     def __init__(self, context: Context):
         super().__init__(context)
